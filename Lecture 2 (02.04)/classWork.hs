@@ -1,32 +1,32 @@
 import CodeWorld
 
-type Tile = Int
-type Coords = (Int, Int)
+data Tile = Wall | Floor | Door DoorColor  | Exit
+data DoorColor = Red | Blue | Green
+data Coords = Coords Int Int
 
-floorTile :: Tile
-floorTile = 0
-
-wallTile :: Tile
-wallTile = 1
+doorColor :: DoorColor -> Color
+doorColor Red = red
+doorColor Blue = blue
+doorColor Green = green
 
 drawTile :: Tile -> Picture
-drawTile tile
-  | tile == floorTile = colored yellow (solidRectangle 0.95 0.95)
-  | tile == wallTile = colored black (solidRectangle 0.95 0.95)
+drawTile Wall = colored black (solidRectangle 0.95 0.95)
+drawTile Floor = colored yellow (solidRectangle 0.95 0.95)
+drawTile (Door dc) = colored (doorColor dc) (solidRectangle 0.95 0.95)
 
 drawTileAt :: Coords -> Tile -> Picture
-drawTileAt (i, j) tile =
+drawTileAt (Coords i j) tile =
   translated x y (drawTile tile)
   where
     x = fromIntegral i
     y = fromIntegral j
 
-tileMap :: Coords -> Tile
-tileMap (i, j)
-  | abs i > 5 = wallTile
-  | abs j > 5 = wallTile
-  | (i, j) == (2, 3) = wallTile
-  | otherwise = floorTile
+levelMap :: Coords -> Tile
+levelMap (Coords i j)
+  | abs i > 5 = Wall
+  | abs j > 5 = Wall
+  | (i, j) == (2, 3) = Wall
+  | otherwise = Door Red
 
 drawFromTo :: (Int, Int) -> (Int -> Picture) -> Picture
 drawFromTo (from, to) something
@@ -34,7 +34,7 @@ drawFromTo (from, to) something
   | otherwise = something from <> drawFromTo(from + 1, to) something
 
 drawRow :: (Int, Int) -> Int -> Picture
-drawRow (from, to) j = drawFromTo (from, to) (\i -> drawTileAt (i, j) (tileMap (i, j)))
+drawRow (from, to) j = drawFromTo (from, to) (\i -> drawTileAt (Coords i j) (levelMap (Coords i j)))
 
 drawRows :: (Int, Int) -> (Int, Int) -> Picture
 drawRows (fromX, toX) (fromY, toY)
