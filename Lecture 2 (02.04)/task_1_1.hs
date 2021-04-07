@@ -3,7 +3,7 @@
 
 import CodeWorld
 
-data Tile = Wall | Floor | Door DoorColor  | Exit deriving (Show, Eq)
+data Tile = Wall | Floor | Door DoorColor  | Exit  | Button deriving (Show, Eq)
 data DoorColor = Red | Blue | Green deriving (Show, Eq)
 data Coords = Coords Int Int
 data Dir = LeftMove | RightMove | UpMove | DownMove deriving (Show, Eq)
@@ -17,6 +17,9 @@ doorColor Green = green
 drawTile :: Tile -> Picture
 drawTile Wall = colored black (solidRectangle 0.95 0.95)
 drawTile Floor = colored yellow (solidRectangle 0.95 0.95)
+drawTile Button = colored red (solidRectangle 0.95 0.95)
+drawTile Exit = colored green (solidRectangle 0.95 0.95)
+
 drawTile (Door dc) = colored (doorColor dc) (solidRectangle 0.95 0.95)
 
 drawTileAt :: Coords -> Tile -> Picture
@@ -31,6 +34,8 @@ levelMap (Coords i j)
   | abs i > 5 = Wall
   | abs j > 5 = Wall
   | (i, j) == (2, 3) = Wall
+  | (i, j) == (4, 4) = Button
+  | (i, j) == (3, 2) = Exit
   | otherwise = Floor
 
 drawFromTo :: (Int, Int) -> (Int -> Picture) -> Picture
@@ -56,12 +61,18 @@ drawTileMap = drawRows (-6, 6) (-6, 6)
 
 tryMove :: Dir -> Coords -> Coords
 tryMove dir (Coords i j)
-  | dir == UpMove && levelMap (Coords i (j + 1)) == Floor = (Coords i (j + 1))
-  | dir == DownMove && levelMap (Coords i (j - 1)) == Floor = (Coords i (j - 1))
-  | dir == LeftMove && levelMap (Coords (i - 1) j) == Floor = (Coords (i - 1) j)
-  | dir == RightMove && levelMap (Coords (i + 1) j) == Floor = (Coords (i + 1) j)
+  | dir == UpMove && canMove (levelMap (Coords i (j + 1))) = (Coords i (j + 1))
+  | dir == DownMove && canMove (levelMap (Coords i (j - 1))) = (Coords i (j - 1))
+  | dir == LeftMove && canMove (levelMap (Coords (i - 1) j)) = (Coords (i - 1) j)
+  | dir == RightMove && canMove (levelMap (Coords (i + 1) j)) = (Coords (i + 1) j)
   | otherwise = (Coords i j)
 
+canMove :: Tile -> Bool
+canMove tile
+  | tile == Floor = True
+  | tile == Button = True
+  | tile == Exit = True
+  | otherwise = False
 
 initialWorld :: Coords
 initialWorld = Coords 0 0
@@ -77,4 +88,6 @@ renderWorld :: Coords -> Picture
 renderWorld coords = drawPlayer coords <> drawTileMap
 
 main :: IO ()
-main = activityOf initialWorld handleWorld renderWorld
+main = solution1
+  where
+    solution1 = activityOf initialWorld handleWorld renderWorld
