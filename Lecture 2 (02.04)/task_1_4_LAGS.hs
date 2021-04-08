@@ -19,13 +19,13 @@ levelMap (Coords i j)
   | (i, j) == (2, 4) = Button Red
   | (i, j) == (4, 1) = Door Green
   | (i, j) == (2, 1) = Button Green
+  | (i, j) == (4, -2) = Door Blue
+  | (i, j) == (2, -2) = Button Blue
   | i > 10 = Wall
   | i < -9 = Wall
   | j > 10 = Wall
   | j < -9 = Wall
   | otherwise = Floor
-
-
 
 drawTile :: Tile -> Picture
 drawTile Wall = colored black (solidRectangle 0.95 0.95)
@@ -77,6 +77,10 @@ openDoors colors currentMap = newMap
   where
     newMap :: Coords -> Tile
     newMap (Coords i j)
+      | i < -10 = currentMap (Coords i j)
+      | i > 11 = currentMap (Coords i j)
+      | j < -10 = currentMap (Coords i j)
+      | i > 11 = currentMap (Coords i j)
       | currentMap (Coords i j) == (Door dc) && dc `elem` colors = Floor
       | otherwise = currentMap (Coords i j)
       where
