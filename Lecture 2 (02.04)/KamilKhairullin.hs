@@ -6,7 +6,7 @@ import CodeWorld
 -- | Holds all possible constructors of type Tile. Tile is building block of our map
 data Tile = Wall | Floor | Door DoorColor  | Exit  | Button DoorColor deriving (Show, Eq)
 -- | Door color is color of doors and buttons
-data DoorColor = Red | Blue | Green deriving (Show, Eq)
+data DoorColor = Red | Pink | Green | LightGreen | Black deriving (Show, Eq)
 -- | Holds coordinates of some object in the map in 2D cartesian coordinate system
 data Coords = Coords Int Int
 -- | Defines direction of moving
@@ -17,15 +17,44 @@ type State = [DoorColor]
 -- | Map of our level
 levelMap :: Coords -> Tile
 levelMap (Coords i j)
-  | (i, j) == (4, 4) = Door Red
-  | (i, j) == (2, 4) = Button Red
-  | (i, j) == (4, 1) = Door Green
-  | (i, j) == (2, 1) = Button Green
-  | i > 10 = Wall
-  | i < -9 = Wall
-  | j > 10 = Wall
-  | j < -9 = Wall
+  | (i, j) == (-9, -9) = Button Red
+  | (i, j) == (10, 10) = Button Green
+  | (i, j) == (10, -9) = Button Pink
+  | (i, j) == (-9, 9) = Button Black
+  | (i, j) == (-9, 0) = Button LightGreen
+  | exit = Exit
+  | melonBlack = Door Black
+  | melonRed1 = Door Red
+  | melonRed2 = Door Red
+  | melonRed3 = Door Red
+  | melonGreen1 = Door Green
+  | melonGreen2 = Door Green
+  | melonGreen3 = Door Green
+  | melonLightGreen1 = Door LightGreen
+  | melonLightGreen2 = Door LightGreen
+  | melonLightGreen3 = Door LightGreen
+  | melonLightPink1 = Door Pink
+  | melonLightPink2 = Door Pink
+  | melonLightPink3 = Door Pink
+  | isMapBorder = Wall
   | otherwise = Floor
+  where
+    melonRed1 = (i == 3 && j == 7) || (j == 6  && (i > 1 && i < 4)) || (j == 5  && (i > 0 && i < 5))
+    melonRed2 = (j == 4  && (i > (-1) && i < 5)) || (j == 3  && (i > (-2) && i < 5)) || (j == 2  && (i > (-3) && i < 5))
+    melonRed3 = (j == 1  && (i > (-4) && i < 4)) || (j == 0  && (i > (-5) && i < 4)) || (j == -1  && (i > (-3) && i < 2))
+    melonGreen1 = (j == 8 && i == 5) || (j == 7 && i == 6) || ((j < 7 && j > 0) && i == 7)
+    melonGreen2 = ((j < 1 && j > -2) && i == 6) || ((j < 0 && j > -3) && i == 5) || ((j < -1 && j > -4) && i == 4)
+    melonGreen3 = (j == -3 && i == 3) || (j == -4 && (i < 3 && i > -4)) || (j == -3 && i == -4) || (j == -2 && i == -5)
+    melonLightGreen1 = (j == 8 && i == 4) || (j == 7 && i == 5) || ((j < 7 && j > 0) && i == 6)
+    melonLightGreen2 = ((j < 1 && j > -2) && i == 5) || ((j < 0 && j > -3) && i == 4) || ((j < -1 && j > -4) && i == 3)
+    melonLightGreen3 = (j == -3 && (i < 3 && i > -4)) || (j == -2 && i == -4) || (j == -1 && i == -5)
+    melonLightPink1 = (j == 6 && i == 4) || (j == 7 && i == 4) || ((j < 7 && j > 0) && i == 5)
+    melonLightPink2 = ((j < 2 && j > -2) && i == 4) || (j == -1 && (i > 1 && i < 4))
+    melonLightPink3 = (j == -2 && (i < 3 && i > -4)) || (j == -1 && i == -3) || (j == -1 && i == -4)
+    melonBlack = (j == 5 && i == 3) || (j == 3 && i == 2) || (j == 1 && i == 1) || (j == 0 && i == -2)
+    --isHorizontalWall = j == 1 || j == 4
+    exit = (j == 1 && i == 1)
+    isMapBorder = i > 10 || i < -9 || j > 10 || j < -9
 
 -- | Maps DoorColor type to CodeWorld color
 --
@@ -33,17 +62,19 @@ levelMap (Coords i j)
 -- * 'Blue' — blue
 -- * 'Green' - green
 doorColor :: DoorColor -> Color
-doorColor Red = red
-doorColor Blue = blue
-doorColor Green = green
+doorColor Red = bright red
+doorColor Pink = bright pink
+doorColor Green = darker 0.21 green
+doorColor Black = black
+doorColor LightGreen = darker 0.03 green
 
 -- | returns CodeWorld Picture for any Tile
 drawTile :: Tile -> Picture
 drawTile Wall = colored black (solidRectangle 0.95 0.95)
 drawTile Floor = colored yellow (solidRectangle 0.95 0.95)
 drawTile (Button dc) = colored (doorColor dc) (solidCircle 0.45) <> colored yellow (solidRectangle 0.95 0.95)
-drawTile Exit = colored green (solidRectangle 0.95 0.95)
-drawTile (Door dc) = colored (doorColor dc) (solidCircle 0.45) <> colored black (solidRectangle 0.95 0.95)
+drawTile Exit = rotated   (-180.0) (lettering  "\x1f349") <> colored yellow (solidRectangle 0.95 0.95)
+drawTile (Door dc) = colored (doorColor dc) (solidRectangle 0.97 0.97)
 
 -- | returns CodeWorld Picture for any Tile with given coordinates
 drawTileAt :: Coords -> Tile -> Picture
@@ -130,7 +161,7 @@ openDoors colors currentMap = newMap
 -- * Initial coordinates of player = (0, 0)
 -- * initial map is levelMap, which was defined above.
 initialWorld :: (State, Coords, (Coords -> Tile))
-initialWorld = ([], (Coords 0 0), levelMap)
+initialWorld = ([], (Coords (-6) (-6)), levelMap)
 
 -- | The event handling function, which updates the state given an event.
 handleWorld :: Event -> (State, Coords, (Coords -> Tile)) -> (State, Coords, (Coords -> Tile))
