@@ -3,7 +3,7 @@
 
 import CodeWorld
 
-data Tile = Wall | Floor | Door DoorColor  | Exit  | Button deriving (Show, Eq)
+data Tile = Wall | Floor | Door DoorColor  | Exit  | Button DoorColor deriving (Show, Eq)
 data DoorColor = Red | Blue | Green deriving (Show, Eq)
 data Coords = Coords Int Int
 data Dir = LeftMove | RightMove | UpMove | DownMove deriving (Show, Eq)
@@ -11,15 +11,31 @@ data Dir = LeftMove | RightMove | UpMove | DownMove deriving (Show, Eq)
 levelMap :: Coords -> Tile
 levelMap (Coords i j)
   | (i, j) == (5, 3) = Door Red
+  | (i, j) == (1, 1) = Door Blue
   | j == 3 = Wall
   | i > 10 = Wall
   | i < -9 = Wall
   | j > 10 = Wall
   | j < -9 = Wall
   | (i, j) == (2, 3) = Wall
-  | (i, j) == (2, 2) = Button
+  | (i, j) == (2, 2) = Button Red
   | (i, j) == (3, 2) = Exit
   | otherwise = Floor
+
+openDoors :: [DoorColor] -> (Coords -> Tile) -> (Coords -> Tile)
+openDoors colors currentMap = newMap
+  where
+    newMap :: Coords -> Tile
+    newMap (Coords i j)
+      | currentMap (Coords i j) == (Door dc) && dc `elem` colors = Floor
+      | otherwise = currentMap (Coords i j)
+      where
+        (Door dc) = currentMap (Coords i j)
+
+{-getMap :: Coords -> (Coords -> Tile) -> (Coords -> Tile)
+getMap (Coords i j) currentMap
+  | currentMap == levelMap && levelMap (Coords i j) == Button = openDoors
+-}
 
 doorColor :: DoorColor -> Color
 doorColor Red = red
@@ -29,7 +45,7 @@ doorColor Green = green
 drawTile :: Tile -> Picture
 drawTile Wall = colored black (solidRectangle 0.95 0.95)
 drawTile Floor = colored yellow (solidRectangle 0.95 0.95)
-drawTile Button = colored red (solidCircle 0.45) <> colored yellow (solidRectangle 0.95 0.95)
+drawTile (Button dc) = colored (doorColor dc) (solidCircle 0.45) <> colored yellow (solidRectangle 0.95 0.95)
 drawTile Exit = colored green (solidRectangle 0.95 0.95)
 drawTile (Door dc) = colored (doorColor dc) (solidCircle 0.45) <> colored black (solidRectangle 0.95 0.95)
 
@@ -40,8 +56,8 @@ drawTileAt (Coords i j) tile =
     x = fromIntegral i
     y = fromIntegral j
 
-drawRow :: (Int, Int) -> Int -> Picture
-drawRow (from, to) j = drawFromTo (from, to) (\i -> drawTileAt (Coords i j) (levelMap (Coords i j)))
+drawRow :: (Coords -> Tile) -> (Int, Int) -> Int -> Picture
+drawRow mapToDraw (from, to) j = drawFromTo (from, to) (\i -> drawTileAt (Coords i j) (mapToDraw (Coords i j)))
 
 drawFromTo :: (Int, Int) -> (Int -> Picture) -> Picture
 drawFromTo (from, to) something
@@ -55,10 +71,8 @@ drawPlayer (Coords i j) = translated x y  (lettering  "\x1F6B6")
       y = fromIntegral j
 
 drawLevelMap :: (Coords -> Tile) -> Picture
-drawLevelMap levelmap = drawFromTo (-10, 11) (\j -> drawRow (-10, 11) j)
+drawLevelMap levelmap = drawFromTo (-10, 11) (\j -> drawRow levelmap (-10, 11) j)
 
-openDoors :: [DoorColor] -> (Coords -> Tile) -> (Coords -> Tile)
-openDoors color currentMap = levelMap
 
 
 tryMove :: Dir -> Coords -> Coords
@@ -70,11 +84,10 @@ tryMove dir (Coords i j)
   | otherwise = (Coords i j)
 
 canMove :: Tile -> Bool
-canMove tile
-  | tile == Floor = True
-  | tile == Button = True
-  | tile == Exit = True
-  | otherwise = False
+canMove Floor = True
+canMove (Button dc) = True
+canMove Exit = True
+canMove _any = False
 
 initialWorld :: Coords
 initialWorld = Coords 0 0
@@ -87,7 +100,7 @@ handleWorld (KeyPress "Right") (Coords i j) = tryMove RightMove (Coords i j)
 handleWorld _anyEvent coords = coords
 
 renderWorld :: Coords -> Picture
-renderWorld coords = scaled 0.8 0.8 (drawPlayer coords <> drawLevelMap levelMap)
+renderWorld coords = scaled 0.8 0.8 (drawPlayer coords <> drawLevelMap (openDoors [Blue, Red ] levelMap))
 
 main :: IO ()
 main = solution1
