@@ -157,7 +157,7 @@ handleWorld (KeyPress "Up") (state, (Coords i j), currentMap)
 -- * If we step on the button, open the doors and steps down
 -- * otherwise just update coordinates of player
 handleWorld (KeyPress "Down") (state, (Coords i j), currentMap)
-  | bottomTile == (Button dc)  && not isButton = (newState, coordinatesWithNewMap, newMap)
+  | bottomTile == (Button dc)  && not isOpened = (newState, coordinatesWithNewMap, newMap)
   | otherwise = (state, coordinatesWithCurrentMap, currentMap)
   where
     (Button dc) = bottomTile
@@ -174,7 +174,7 @@ handleWorld (KeyPress "Down") (state, (Coords i j), currentMap)
 -- * If we step on the button, open the doors and steps left
 -- * otherwise just update coordinates of player
 handleWorld (KeyPress "Left") (state, (Coords i j), currentMap)
-  | leftTile == (Button dc)  && not isButton = (newState, coordinatesWithNewMap, newMap)
+  | leftTile == (Button dc)  && not isOpened = (newState, coordinatesWithNewMap, newMap)
   | otherwise = (state, coordinatesWithCurrentMap, currentMap)
   where
     (Button dc) = leftTile
@@ -191,7 +191,7 @@ handleWorld (KeyPress "Left") (state, (Coords i j), currentMap)
 -- * If we step on the button, open the doors and steps right
 -- * otherwise just update coordinates of player
 handleWorld (KeyPress "Right") (state, (Coords i j), currentMap)
-  | rightTile == (Button dc)  && not isButton = (newState, coordinatesWithNewMap, newMap)
+  | rightTile == (Button dc)  && not isOpened = (newState, coordinatesWithNewMap, newMap)
   | otherwise = (state, coordinatesWithCurrentMap, currentMap)
   where
     (Button dc) = rightTile
@@ -208,7 +208,9 @@ handleWorld _anyEvent (state, (Coords i j), currentMap) = (state, (Coords i j), 
 
 -- | The visualization function, which converts the state into a picture to display.
 renderWorld :: (State, Coords, (Coords -> Tile)) -> Picture
-renderWorld (state, coords, currentMap) = scaled 0.8 0.8 (drawPlayer coords <> drawLevelMap currentMap)
+renderWorld (state, coords, currentMap) = scaled scaleMultiplicator scaleMultiplicator (drawPlayer coords <> drawLevelMap currentMap)
+  where
+    scaleMultiplicator = 0.8
 
 main :: IO ()
 main = solution4
