@@ -40,22 +40,36 @@ elevator MovingUp = [(Stop, Idle)]
 elevator MovingDown = [(Stop, Idle)]
 
 applyAction :: Maybe a -> (a -> a -> Bool) -> (s -> [(a, s)]) -> s -> s
-applyAction button equalityTestforButton elevator currentMode = newMode
+applyAction (Just key) equalityTest mapping currentValue = newValue
   where
-    newMode = findValueByKey (elevator currentMode) equalityTestforButton button
+    newValue = findValueByKey currentValue (mapping currentValue) equalityTest key
 
-findValueByKey :: [(x, y)] -> (x -> x -> Bool) -> x -> y
-findValueByKey [(a, b)] equalCheck key = b
-findValueByKey [(a, b), (c, d)] equalCheck key
-  | equalCheck a key = b
-  | otherwise = d
+applyAction Nothing _ _ currentValue = currentValue
+
+
+findValueByKey :: y -> [(x, y)] -> (x -> x -> Bool) -> x -> y
+findValueByKey currentMode [] _ _ = currentMode
+findValueByKey currentMode ((x, y) : xs) equalCheck key
+  | equalCheck x key = y
+  | otherwise = findValueByKey currentMode xs equalCheck key
+
 
 isEqual :: Button -> Button -> Bool
 isEqual x y
   | x == y = True
   | otherwise = False
 
+initialWorld :: Mode
+initialWorld = Idle
+
+handleWorld :: Event -> Mode -> Mode
+handleWorld (KeyPress "Up") currentMode = applyAction (Just Up) isEqual elevator currentMode
+handleWorld (KeyPress "Down") currentMode = applyAction (Just Down) isEqual elevator currentMode
+handleWorld (KeyPress " ") currentMode = applyAction (Just Stop) isEqual elevator currentMode
+handleWorld _anyEvent currentMode = currentMode
+
+renderWorld :: Mode -> Picture
+renderWorld currentMode = drawMode currentMode
+
 main :: IO()
-main
-    | applyAction Up isEqual elevator Idle == MovingDown = drawingOf (solidCircle 1)
-    | otherwise = drawingOf blank
+main = activityOf initialWorld handleWorld renderWorld
