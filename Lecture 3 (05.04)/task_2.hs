@@ -2,9 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 import CodeWorld
 
-data Button = Up | Down | Stop
-data Mode = Idle | MovingUp | MovingDown
-
+data Button = Up | Down | Stop deriving Eq
+data Mode = Idle | MovingUp | MovingDown deriving Eq
 
 templateCircle :: Picture
 templateCircle = colored (light grey) (solidCircle 0.425) <> colored black (solidCircle 0.5)
@@ -35,6 +34,28 @@ asSpaced range f (x:xs) = f x <> shifted (asSpaced range f xs)
   where
     shifted = translated range 0
 
+elevator :: Mode -> [(Button, Mode)]
+elevator Idle = [(Up, MovingUp), (Down, MovingDown)]
+elevator MovingUp = [(Stop, Idle)]
+elevator MovingDown = [(Stop, Idle)]
+
+applyAction :: Maybe a -> (a -> a -> Bool) -> (s -> [(a, s)]) -> s -> s
+applyAction button equalityTestforButton elevator currentMode = newMode
+  where
+    newMode = findValueByKey (elevator currentMode) equalityTestforButton button
+
+findValueByKey :: [(x, y)] -> (x -> x -> Bool) -> x -> y
+findValueByKey [(a, b)] equalCheck key = b
+findValueByKey [(a, b), (c, d)] equalCheck key
+  | equalCheck a key = b
+  | otherwise = d
+
+isEqual :: Button -> Button -> Bool
+isEqual x y
+  | x == y = True
+  | otherwise = False
 
 main :: IO()
-main = drawingOf (drawMode MovingDown)--(asSpaced 2 drawButton [Up, Down, Stop])
+main
+    | applyAction Up isEqual elevator Idle == MovingDown = drawingOf (solidCircle 1)
+    | otherwise = drawingOf blank
