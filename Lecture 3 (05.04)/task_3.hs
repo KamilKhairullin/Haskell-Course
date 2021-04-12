@@ -82,14 +82,11 @@ interactiveFSM :: s -- ˆ Initial state.
   -> (a -> Picture) -- ˆ How to draw actions.
   -> IO ()
 
-drawActions :: [a] -> (a -> Picture) -> Picture
-drawActions [] f = blank
-drawActions (x : xs) f = (f x) <> translated 2 0 (drawActions xs f)
-
-interactiveFSM initialState isEqual mapping eventConverter drawState drawAction = solution
+interactiveFSM initialState equalityCheck mapping eventConverter drawState drawAction = solution
   where
      solution = activityOf initialState eventConverter renderedPicture
-     renderedPicture state = drawState state <> translated 3 0 (drawActions (buttons state) drawAction)
-     buttons state = returnAllValues state (mapping state) isEqual
+     renderedPicture state = drawState state <> translated 2 0 (asSpaced 1.5 drawAction (buttons state))
+     buttons state = returnAllValues state (mapping state) equalityCheck
+
 main :: IO()
 main = interactiveFSM initialWorld isEqual elevator handleWorld  drawMode drawButton
