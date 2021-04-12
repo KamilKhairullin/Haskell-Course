@@ -102,19 +102,17 @@ interactiveFSM :: (s, Double, Double) -- ˆ Initial state.
   -> (Event -> (s, Double, Double) -> (s, Double, Double)) -- ˆ How to convert events into states.
   -> (s -> Picture) -- ˆ How to draw states.
   -> (a -> Picture) -- ˆ How to draw actions.
-  -> ((s, Double, Double) -> Picture) -- ^ Rednerer
   -> IO ()
 
-
-interactiveFSM initialState equalityCheck mapping eventConverter drawState drawAction renderer = solution
+interactiveFSM initialState equalityCheck mapping eventConverter drawState drawAction = solution
   where
-     solution = activityOf initialState eventConverter renderer
-
-renderPicture :: (Mode, Double, Double) -> Picture
-renderPicture (mode, coordinates, _) = drawMode mode <> translated 2 0 (asSpaced 1.5 drawButton (buttons)) <> translated (-3) coordinates (solidRectangle 1 1)
-  where
-    buttons = returnAllValues mode (elevator mode) isEqual
-
+     solution = activityOf initialState eventConverter renderPicture
+     renderPicture (mode, coordinates, _) = statePicture <> actionPicture <> liftPicture
+       where
+         statePicture = drawState mode
+         actionPicture = translated 2 0 (asSpaced 1.5 drawAction (buttons))
+         liftPicture = translated (-3) coordinates (solidRectangle 1 1)
+         buttons = returnAllValues mode (mapping mode) equalityCheck
 
 main :: IO()
-main = interactiveFSM initialWorld isEqual elevator handleWorld  drawMode drawButton renderPicture
+main = interactiveFSM initialWorld isEqual elevator handleWorld  drawMode drawButton
