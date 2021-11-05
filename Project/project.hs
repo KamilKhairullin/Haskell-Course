@@ -7,14 +7,21 @@ import Data.Map.Strict
 import Data.Foldable 
 import Data.List
 
+-- | Holds all possible values of type Tile 
 data Tile = Background | Picker | Pipe PipeType Double | Water | Empty | Finish deriving (Show, Eq, Ord) 
+
+-- |Coords with x and y Integers
 data Coords = Coords Int Int deriving (Show, Eq, Ord) 
+
+-- | Type of pipe (Line - | ) Angle (|_ _| |- -| )
 data PipeType = Line | Angle | Cross deriving (Show, Eq, Ord) 
 
 
+-- | level map is mapping from Coords to Tiles of size mapBorders. Empty (all Backgrounds) at start.
 levelMap :: Map Coords Tile
 levelMap = fromList (generateMap mapBorders mapBorders)
 
+-- | generates current pipe using number of turns
 pipeRotation :: Map Int Tile
 pipeRotation = fromList [(0, p1), (1, p2), (2, p3), (3, p4), (4, p5), (5, p6)]
   where
@@ -25,12 +32,15 @@ pipeRotation = fromList [(0, p1), (1, p2), (2, p3), (3, p4), (4, p5), (5, p6)]
     p5 = Pipe Angle 180
     p6 = Pipe Angle 270
     
+-- | graph of pipes as adjacency vector. 
 levelGraph :: Map (Coords, Tile) [(Coords, Tile)] 
 levelGraph = fromList []
 
+-- | Coords of borders of map (N M) means map is from N to M by X-axis and from N to M by Y-axis
 mapBorders :: Coords
 mapBorders = Coords (-4) 5
  
+-- | Check if given coordinates are in border
 isInBorder :: Coords -> Coords -> Bool
 isInBorder borders coords = answer
   where 
@@ -52,6 +62,7 @@ breadthFirst g node dist visited = maybe [] (\l -> fold $ fmap a l) (Data.Map.St
     allNear = Data.Map.Strict.lookup node g
       
 ----------------------------------------------------------------------------------------------------------------------------   
+-- | Adds Line Pipe to graph. Updates all related connections in adjacency vector. 
 addLineToGraph :: Map (Coords, Tile) [(Coords, Tile)]  -> Map Coords Tile -> Coords -> Int -> Map (Coords, Tile) [(Coords, Tile)] 
 addLineToGraph graph mymap coords pipeType
   | correctnessFirstNeighbor && correctnessSecondNeighbor = unionsWith (++) [graph, mapLeft, mapRight, mapCurrent]
@@ -91,7 +102,7 @@ addLineToGraph graph mymap coords pipeType
     mapCurrentLeft = fromList[((coords, currentTile), [(firstNeighborCoords, firstNeighborTile)])]
     mapCurrentRight = fromList[((coords, currentTile), [(secondNeighborCoords, secondNeighborTile)])]
   
-
+-- | Adds Line Angle to graph. Updates all related connections in adjacency vector.
 addAngleToGraph :: Map (Coords, Tile) [(Coords, Tile)]  -> Map Coords Tile -> Coords -> Int -> Map (Coords, Tile) [(Coords, Tile)] 
 addAngleToGraph graph mymap coords pipeType
   | correctnessFirstNeighbor && correctnessSecondNeighbor = unionsWith (++) [graph, mapLeft, mapRight, mapCurrent]
@@ -132,6 +143,8 @@ addAngleToGraph graph mymap coords pipeType
     mapCurrentLeft = fromList[((coords, currentTile), [(firstNeighborCoords, firstNeighborTile)])]
     mapCurrentRight = fromList[((coords, currentTile), [(secondNeighborCoords, secondNeighborTile)])]
 
+-- | Sub-function for adjacency vector updates.
+-- Checks if given pipe can be connected to some pipe, if given pipe placed left to some pipe.
 isCorrectLeft :: Tile -> Bool
 isCorrectLeft (Pipe Line 0) = True
 isCorrectLeft (Pipe Angle 0) = True
@@ -139,6 +152,8 @@ isCorrectLeft (Pipe Angle 270) = True
 isCorrectLeft (Pipe Cross 0) = True
 isCorrectLeft _ = False
 
+-- | Sub-function for adjacency vector updates.
+-- Checks if given pipe can be connected to some pipe, if given pipe placed right to some pipe.
 isCorrectRight :: Tile -> Bool
 isCorrectRight (Pipe Line 0) = True
 isCorrectRight (Pipe Angle 90) = True
@@ -146,6 +161,8 @@ isCorrectRight (Pipe Angle 180) = True
 isCorrectRight (Pipe Cross 0) = True
 isCorrectRight _ = False
 
+-- | Sub-function for adjacency vector updates.
+-- Checks if given pipe can be connected to some pipe, if given pipe placed top to some pipe.
 isCorrectTop :: Tile -> Bool
 isCorrectTop (Pipe Line 90) = True
 isCorrectTop (Pipe Angle 270) = True
@@ -153,6 +170,8 @@ isCorrectTop (Pipe Angle 180) = True
 isCorrectTop (Pipe Cross 0) = True
 isCorrectTop _ = False
 
+-- | Sub-function for adjacency vector updates.
+-- Checks if given pipe can be connected to some pipe, if given pipe placed bot to some pipe.
 isCorrectBot :: Tile -> Bool
 isCorrectBot (Pipe Line 90) = True
 isCorrectBot (Pipe Angle 90) = True
@@ -161,11 +180,13 @@ isCorrectBot (Pipe Cross 0) = True
 isCorrectBot _ = False
 ----------------------------------------------------------------------------------------------------------------------------    
 
+-- | Recurcively enerates start map.
 generateMap :: Coords -> Coords -> [(Coords, Tile)] 
 generateMap (Coords yFrom yTo) (Coords xFrom xTo) 
   | yFrom <= yTo = (generateRow yFrom (Coords xFrom xTo)) ++ generateMap (Coords (yFrom + 1) yTo) (Coords xFrom xTo)
   | otherwise = []
-    
+
+-- |Recurcively generates row.
 generateRow :: Int -> Coords -> [(Coords, Tile)] 
 generateRow y (Coords from to)
   | y == 4 && from == 4   = [(currentCoords, (Pipe Line 0))] ++ (generateRow y newCoords)
@@ -179,6 +200,7 @@ generateRow y (Coords from to)
     
 
 ----------------------------------------------------------------------------------------------------------------------------
+-- | On all map updates adjecency vector casting addLineToGraph or addPipeToGraph to every Pipe in the map.
 updateGraph :: Coords -> Coords -> Map (Coords, Tile) [(Coords, Tile)]  -> Map Coords Tile ->  Map (Coords, Tile) [(Coords, Tile)]
 updateGraph (Coords yFrom yTo) (Coords xFrom xTo) graph mymap
   | yFrom <= yTo = updateGraph  (Coords (yFrom+1) yTo) (Coords xFrom xTo) newGraph mymap
@@ -186,6 +208,7 @@ updateGraph (Coords yFrom yTo) (Coords xFrom xTo) graph mymap
     where 
       newGraph = updateRow yFrom (Coords xFrom xTo) graph mymap
   
+-- |  On given row updates adjecency vector casting addLineToGraph or addPipeToGraph to every Pipe in the row.
 updateRow :: Int -> Coords -> Map (Coords, Tile) [(Coords, Tile)]  -> Map Coords Tile ->  Map (Coords, Tile) [(Coords, Tile)]
 updateRow y (Coords xFrom xTo) graph mymap
   | xFrom < xTo = updateRow y (Coords (xFrom+1) xTo) newGraph mymap 
@@ -219,22 +242,27 @@ drawTileAt (Coords i j) tile =
 drawRow :: (Map Coords Tile) -> Coords -> Int -> Picture
 drawRow myMap coords j = drawFromTo coords (\i -> drawTileAt (Coords i j) (Data.Map.Strict.lookup (Coords i j) myMap))
 
-
+-- | draws any function (Int -> Picture) at given range
+--
+-- * Returns CodeWorld Picture
 drawFromTo :: Coords -> (Int -> Picture) -> Picture
 drawFromTo coords something
   | from >= to = blank
   | otherwise = something from <> drawFromTo(Coords (from + 1) to) something
   where
     Coords from to = coords
-    
+
+
+-- | Draw a map from Data.Map of Coords to Tile.
 drawLevelMap :: Map Coords Tile -> Picture
 drawLevelMap mymap = drawFromTo mapBorders (\j -> drawRow mymap mapBorders j)
 
-
+-- | Draws water for every point in given array
 drawWaterPoints :: [(Coords,  Tile)] -> Picture
 drawWaterPoints [] = blank
 drawWaterPoints ((coords, _) : xs) = (drawTileAt coords (Just Water)) <> drawWaterPoints xs 
     
+-- | draws interface with Pipes what will be given for you next, after next and after after next.
 drawNextPipes :: Int -> Picture
 drawNextPipes currentBlockNumber = elements 
   where
@@ -251,6 +279,7 @@ drawNextPipes currentBlockNumber = elements
     background = colored white (solidRectangle 1 1) <> colored black (solidRectangle 1.2 1.2)
     background_next = colored white (solidRectangle 1 1) <> colored red (solidRectangle 1.2 1.2)
     
+-- | returns CodeWorld Picture for any Maybe Tile
 drawTile :: Maybe Tile -> Picture
 drawTile (Just Background) = colored white (solidRectangle 0.9 0.9) <> colored black (solidRectangle 1 1)
 drawTile (Just Water) =  colored blue (solidRectangle 0.25 0.25)
@@ -267,13 +296,20 @@ drawTile (Just(Pipe Cross rotation)) = rotated (pi / 180 * rotation) crossPipe
 drawTile (Just(Finish)) = colored black (solidCircle 0.45)
 drawTile _ = blank
 ----------------------------------------------------------------------------------------------------------------------------
-
+-- | Initial world. The initial state of the activity.
+--
+-- * Int - block from which to start
+-- * Coords - Initial coordinates of picker = (0, 0)
+-- * (Map Coords Tile) - initial map is levelMap, which was defined above.
+-- * levelGraph - empty graph.
 initialWorld :: (Int, Coords, (Map Coords Tile), Map (Coords, Tile) [(Coords, Tile)] )
-initialWorld = (1, (Coords (4) 4), levelMap, levelGraph)
+initialWorld = (1, (Coords (0) 0), levelMap, levelGraph)
 
 
 handleWorld :: Event -> (Int, Coords, (Map Coords Tile), Map (Coords, Tile) [(Coords, Tile)] ) -> (Int, Coords, (Map Coords Tile), Map (Coords, Tile) [(Coords, Tile)] )
 
+-- | Actions when pressing the "Up" button
+-- Moves picker up if it is in borders.
 handleWorld (KeyPress "Up") (blockNumber, pickerCoords, currentMap, graph)
   | isMovable = (blockNumber, (Coords i (j+1)), currentMap, graph)
   | otherwise = (blockNumber, pickerCoords, currentMap, graph)
@@ -281,7 +317,9 @@ handleWorld (KeyPress "Up") (blockNumber, pickerCoords, currentMap, graph)
     Coords i j = pickerCoords
     Coords _ mapJ = mapBorders
     isMovable = j < mapJ - 1
-
+    
+-- | Actions when pressing the "Down" button
+-- Moves picker down if it is in borders.
 handleWorld (KeyPress "Down") (blockNumber, pickerCoords, currentMap, graph)
   | isMovable = (blockNumber, (Coords i (j-1)), currentMap, graph)
   | otherwise = (blockNumber, pickerCoords, currentMap, graph)
@@ -289,7 +327,9 @@ handleWorld (KeyPress "Down") (blockNumber, pickerCoords, currentMap, graph)
     Coords i j = pickerCoords
     Coords mapI _ = mapBorders
     isMovable = j > mapI
-    
+
+-- | Actions when pressing the "Left" button
+-- Moves picker left if it is in borders.
 handleWorld (KeyPress "Left") (blockNumber, pickerCoords, currentMap, graph)
   | isMovable = (blockNumber, (Coords (i-1) j), currentMap, graph)
   | otherwise = (blockNumber, pickerCoords, currentMap, graph)
@@ -297,7 +337,9 @@ handleWorld (KeyPress "Left") (blockNumber, pickerCoords, currentMap, graph)
     Coords i j = pickerCoords
     Coords mapI _ = mapBorders
     isMovable = i > mapI
-        
+    
+-- | Actions when pressing the "Right" button
+-- Moves picker right if it is in borders.        
 handleWorld (KeyPress "Right") (blockNumber, pickerCoords, currentMap, graph)
   | isMovable = (blockNumber, (Coords (i+1) j), currentMap, graph)
   | otherwise = (blockNumber, pickerCoords, currentMap, graph)
@@ -305,7 +347,9 @@ handleWorld (KeyPress "Right") (blockNumber, pickerCoords, currentMap, graph)
     Coords i j = pickerCoords
     Coords _ mapJ = mapBorders
     isMovable = i < mapJ - 1
-   
+
+-- | Actions when pressing the "Enter" button
+-- Places current Pipe to picker place. Updates graph. Updates map.
 handleWorld (KeyPress "Enter") (blockNumber, pickerCoords, currentMap, graph) = ((blockNumber + 1), pickerCoords, newMap, newGraph) 
   where
     newMap = Data.Map.Strict.insert pickerCoords newTile currentMap
@@ -318,16 +362,16 @@ handleWorld (KeyPress "Enter") (blockNumber, pickerCoords, currentMap, graph) = 
       | newTile == (Pipe Angle 90) = addAngleToGraph graph currentMap pickerCoords 1
       | newTile == (Pipe Angle 180) = addAngleToGraph graph currentMap pickerCoords 2
       | otherwise = addAngleToGraph graph currentMap pickerCoords 3
-    --gameOver 
-    --  | left = True
-   --left = (currentMap ! (Coords (-1) (-4))) == (Pipe Line 0) || (Pipe Angle 270) || (Pipe Angle 0)
+   
      
 handleWorld _anyEvent (blockNumber, pickerCoords, currentMap, graph) = (blockNumber, pickerCoords, currentMap, graph)
 
+-- | The visualization function, which converts the state into a picture to display.
+-- | Runs Search on graph and draws all found water blocks.
 renderWorld :: (Int, Coords, (Map Coords Tile), Map (Coords, Tile) [(Coords, Tile)]) -> Picture
 renderWorld (blockNumber, pickerCoords, currentMap, graph) = scaled scaleMultiplicator scaleMultiplicator (drawNextPipes blockNumber <> drawWaterPoints points <> drawTileAt pickerCoords (Just Picker) <> drawLevelMap currentMap)
   where
-    updGraph = updateGraph mapBorders mapBorders graph currentMap
+    updGraph = updateGraph mapBorders mapBorders (fromList []) currentMap
     scaleMultiplicator = 1
     points = nub(breadthFirst updGraph searchStart 40 [])
     searchStart = ((Coords (4) 4), (Pipe Line 0)) 
@@ -336,4 +380,3 @@ renderWorld (blockNumber, pickerCoords, currentMap, graph) = scaled scaleMultipl
 
 main :: IO ()
 main = activityOf initialWorld handleWorld renderWorld
-
